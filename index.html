@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Hash Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #444;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            border-color: #ef9a9a;
+        }
+        .success {
+            color: #2e7d32;
+            background-color: #e8f5e9;
+            border-color: #a5d6a7;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Server Status: Checking...</div>
+    <h1>API Hash Generator</h1>
+
+    <div class="container">
+        <h2>Generate Hashes</h2>
+        <div class="form-group">
+            <label for="prefix">Prefix:</label>
+            <input type="text" id="prefix" value="UNC">
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity:</label>
+            <input type="number" id="quantity" value="5">
+        </div>
+        <div class="form-group">
+            <label for="masterPromocode">Master Promocode:</label>
+            <input type="text" id="masterPromocode" value="PROMO2025">
+        </div>
+        <button onclick="generateHashes()">Generate Hashes</button>
+        <div class="response" id="generateResponse"></div>
+    </div>
+
+    <div class="container">
+        <h2>Assign Hash</h2>
+        <div class="form-group">
+            <label for="assignEmail">Email:</label>
+            <input type="email" id="assignEmail" value="test@example.com">
+        </div>
+        <div class="form-group">
+            <label for="assignPrefix">Prefix:</label>
+            <input type="text" id="assignPrefix" value="UNC">
+        </div>
+        <button onclick="assignHash()">Assign Hash</button>
+        <div class="response" id="assignResponse"></div>
+    </div>
+
+    <div class="container">
+        <h2>Validate Hash</h2>
+        <div class="form-group">
+            <label for="validateHash">Hash:</label>
+            <input type="text" id="validateHash" placeholder="Enter hash to validate">
+        </div>
+        <button onclick="validateHash()">Validate Hash</button>
+        <div class="response" id="validateResponse"></div>
+    </div>
+
+    <div class="container">
+        <h2>Translate Hash</h2>
+        <div class="form-group">
+            <label for="translateHash">Hash:</label>
+            <input type="text" id="translateHash" placeholder="Enter hash to translate">
+        </div>
+        <button onclick="translateHash()">Translate Hash</button>
+        <div class="response" id="translateResponse"></div>
+    </div>
+
+    <div class="container">
+        <h2>Use Hash</h2>
+        <div class="form-group">
+            <label for="useHash">Hash:</label>
+            <input type="text" id="useHash" placeholder="Enter hash to use">
+        </div>
+        <button onclick="useHash()">Use Hash</button>
+        <div class="response" id="useResponse"></div>
+    </div>
+
+    <script>
+        // Use relative URL instead of absolute
+        const API_URL = '';
+
+        function showResponse(elementId, response, isError = false) {
+            const responseElement = document.getElementById(elementId);
+            responseElement.textContent = JSON.stringify(response, null, 2);
+            responseElement.className = 'response ' + (isError ? 'error' : 'success');
+        }
+
+        function updateStatus(message, isError = false) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = `Server Status: ${message}`;
+            statusElement.style.backgroundColor = isError ? '#ffebee' : '#e8f5e9';
+            statusElement.style.color = isError ? '#d32f2f' : '#2e7d32';
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    updateStatus('Online');
+                } else {
+                    updateStatus('Error: ' + response.status, true);
+                }
+            } catch (error) {
+                updateStatus('Offline', true);
+                console.error('Server status check failed:', error);
+            }
+        }
+
+        // Check server status on page load
+        checkServerStatus();
+
+        async function makeRequest(endpoint, method, data) {
+            try {
+                console.log('Making request to:', endpoint);
+                console.log('Request data:', data);
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const responseData = await response.json();
+                console.log('Response data:', responseData);
+                return responseData;
+            } catch (error) {
+                console.error('Request failed:', error);
+                throw error;
+            }
+        }
+
+        async function generateHashes() {
+            try {
+                const data = {
+                    prefix: document.getElementById('prefix').value,
+                    quantity: parseInt(document.getElementById('quantity').value),
+                    masterPromocode: document.getElementById('masterPromocode').value
+                };
+                const response = await makeRequest('/generateHashes', 'POST', data);
+                showResponse('generateResponse', response);
+            } catch (error) {
+                showResponse('generateResponse', { error: error.message }, true);
+            }
+        }
+
+        async function assignHash() {
+            try {
+                const data = {
+                    email: document.getElementById('assignEmail').value,
+                    prefix: document.getElementById('assignPrefix').value
+                };
+                const response = await makeRequest('/assign', 'POST', data);
+                showResponse('assignResponse', response);
+            } catch (error) {
+                showResponse('assignResponse', { error: error.message }, true);
+            }
+        }
+
+        async function validateHash() {
+            try {
+                const data = {
+                    hash: document.getElementById('validateHash').value
+                };
+                const response = await makeRequest('/validate', 'POST', data);
+                showResponse('validateResponse', response);
+            } catch (error) {
+                showResponse('validateResponse', { error: error.message }, true);
+            }
+        }
+
+        async function translateHash() {
+            try {
+                const data = {
+                    hash: document.getElementById('translateHash').value
+                };
+                const response = await makeRequest('/translate', 'POST', data);
+                showResponse('translateResponse', response);
+            } catch (error) {
+                showResponse('translateResponse', { error: error.message }, true);
+            }
+        }
+
+        async function useHash() {
+            try {
+                const data = {
+                    hash: document.getElementById('useHash').value
+                };
+                const response = await makeRequest('/use', 'POST', data);
+                showResponse('useResponse', response);
+            } catch (error) {
+                showResponse('useResponse', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html> 

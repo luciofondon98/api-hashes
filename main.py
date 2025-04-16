@@ -140,43 +140,42 @@ async def generate_hashes(request: GenerateHashesRequest):
 @app.post("/assign", response_model=AssignResponse)
 async def assign_hash(request: AssignRequest):
     db = SessionLocal()
-    
-    # Check if email already has an assigned hash
-    existing_hash = db.query(Hash).filter(
-        Hash.email == request.email,
-        Hash.status.in_([HashStatus.ACTIVE, HashStatus.ASSIGNED])
-    ).first()
-    
-    if existing_hash:
-        db.close()
+    try:
+        # Check if email already has an assigned hash
+        existing_hash = db.query(Hash).filter(
+            Hash.email == request.email,
+            Hash.status.in_([HashStatus.ACTIVE, HashStatus.ASSIGNED])
+        ).first()
+        
+        if existing_hash:
+            return AssignResponse(
+                success=True,
+                assignedHash=existing_hash.hash,
+                email=request.email
+            )
+        
+        # Find an available hash with the given prefix
+        available_hash = db.query(Hash).filter(
+            Hash.hash.startswith(request.prefix),
+            Hash.status == HashStatus.ACTIVE
+        ).first()
+        
+        if not available_hash:
+            raise HTTPException(status_code=404, detail="No available hashes found")
+        
+        available_hash.status = HashStatus.ASSIGNED
+        available_hash.email = request.email
+        available_hash.assigned_date = datetime.utcnow()
+        
+        db.commit()
+        
         return AssignResponse(
             success=True,
-            assignedHash=existing_hash.hash,
+            assignedHash=available_hash.hash,
             email=request.email
         )
-    
-    # Find an available hash with the given prefix
-    available_hash = db.query(Hash).filter(
-        Hash.hash.startswith(request.prefix),
-        Hash.status == HashStatus.ACTIVE
-    ).first()
-    
-    if not available_hash:
+    finally:
         db.close()
-        raise HTTPException(status_code=404, detail="No available hashes found")
-    
-    available_hash.status = HashStatus.ASSIGNED
-    available_hash.email = request.email
-    available_hash.assigned_date = datetime.utcnow()
-    
-    db.commit()
-    db.close()
-    
-    return AssignResponse(
-        success=True,
-        assignedHash=available_hash.hash,
-        email=request.email
-    )
 
 @app.post("/validate", response_model=ValidateResponse)
 async def validate_hash(request: ValidateRequest):
@@ -228,6 +227,19 @@ async def use_hash(request: UseRequest):
     db.close()
     
     return UseResponse(success=True)
+
+@app.delete("/clear-database")
+async def clear_database():
+    db = SessionLocal()
+    try:
+        db.query(Hash).delete()
+        db.commit()
+        return {"success": True, "message": "Database cleared successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 @app.get("/database")
 async def get_database():

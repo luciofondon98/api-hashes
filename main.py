@@ -227,4 +227,21 @@ async def use_hash(request: UseRequest):
     db.commit()
     db.close()
     
-    return UseResponse(success=True) 
+    return UseResponse(success=True)
+
+@app.get("/database")
+async def get_database():
+    db = SessionLocal()
+    hashes = db.query(Hash).all()
+    db.close()
+    return [
+        {
+            "hash": h.hash,
+            "master_promocode": h.master_promocode,
+            "status": h.status,
+            "email": h.email,
+            "assigned_date": h.assigned_date.isoformat() if h.assigned_date else None,
+            "used_date": h.used_date.isoformat() if h.used_date else None
+        }
+        for h in hashes
+    ] 

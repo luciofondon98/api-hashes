@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -81,11 +81,67 @@
             background-color: #f8f8f8;
             border: 1px solid #ddd;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-active {
+            color: #2e7d32;
+        }
+        .status-assigned {
+            color: #1976d2;
+        }
+        .status-used {
+            color: #f57c00;
+        }
+        .status-expired {
+            color: #d32f2f;
+        }
+        .refresh-btn {
+            background-color: #2196F3;
+            margin-bottom: 10px;
+        }
+        .refresh-btn:hover {
+            background-color: #1976D2;
+        }
     </style>
 </head>
 <body>
     <div id="status">Server Status: Checking...</div>
     <h1>API Hash Generator</h1>
+
+    <div class="container">
+        <h2>Database View</h2>
+        <button class="refresh-btn" onclick="refreshDatabase()">Refresh Database</button>
+        <table id="databaseTable">
+            <thead>
+                <tr>
+                    <th>Hash</th>
+                    <th>Master Promocode</th>
+                    <th>Status</th>
+                    <th>Email</th>
+                    <th>Assigned Date</th>
+                    <th>Used Date</th>
+                </tr>
+            </thead>
+            <tbody id="databaseContent">
+                <!-- Database content will be inserted here -->
+            </tbody>
+        </table>
+    </div>
 
     <div class="container">
         <h2>Generate Hashes</h2>
@@ -212,6 +268,30 @@
             }
         }
 
+        async function refreshDatabase() {
+            try {
+                const response = await fetch('/database');
+                const data = await response.json();
+                const tbody = document.getElementById('databaseContent');
+                tbody.innerHTML = '';
+                
+                data.forEach(hash => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${hash.hash}</td>
+                        <td>${hash.master_promocode}</td>
+                        <td class="status-${hash.status}">${hash.status}</td>
+                        <td>${hash.email || '-'}</td>
+                        <td>${hash.assigned_date ? new Date(hash.assigned_date).toLocaleString() : '-'}</td>
+                        <td>${hash.used_date ? new Date(hash.used_date).toLocaleString() : '-'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error refreshing database:', error);
+            }
+        }
+
         async function generateHashes() {
             try {
                 const data = {
@@ -221,6 +301,7 @@
                 };
                 const response = await makeRequest('/generateHashes', 'POST', data);
                 showResponse('generateResponse', response);
+                refreshDatabase(); // Refresh the database view after generating hashes
             } catch (error) {
                 showResponse('generateResponse', { error: error.message }, true);
             }
@@ -234,6 +315,7 @@
                 };
                 const response = await makeRequest('/assign', 'POST', data);
                 showResponse('assignResponse', response);
+                refreshDatabase(); // Refresh the database view after assigning hash
             } catch (error) {
                 showResponse('assignResponse', { error: error.message }, true);
             }
@@ -270,10 +352,14 @@
                 };
                 const response = await makeRequest('/use', 'POST', data);
                 showResponse('useResponse', response);
+                refreshDatabase(); // Refresh the database view after using hash
             } catch (error) {
                 showResponse('useResponse', { error: error.message }, true);
             }
         }
+
+        // Load database on page load
+        refreshDatabase();
     </script>
 </body>
 </html> 

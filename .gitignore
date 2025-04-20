@@ -34,10 +34,14 @@ env/
 # Database
 *.db
 *.sqlite3
+data/
 
 # Logs
 *.log
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Docker
+.docker/ 

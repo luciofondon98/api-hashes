@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: hash-api
+    env: docker
+    buildCommand: docker build -t hash-api .
+    startCommand: docker run -p $PORT:8000 hash-api
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./data/sql_app.db 
